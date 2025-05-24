@@ -87,13 +87,22 @@ router.put('/forgotPassword', async (req, res) => {
   try {
     const { email, newPassword } = req.body;
     
+    // Validate inputs
+    if (!email || !newPassword) {
+      return res.status(400).json({ message: 'Email and new password are required' });
+    }
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({ message: 'Password must be at least 6 characters long' });
+    }
+    
     // Check if user exists
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: 'User not found' });
     }
     
-    // Update password
+    // Update password - set explicitly to trigger the pre-save hook for hashing
     user.password = newPassword;
     await user.save();
     
@@ -101,6 +110,18 @@ router.put('/forgotPassword', async (req, res) => {
   } catch (error) {
     console.error('Password reset error:', error);
     res.status(500).json({ message: 'Server error during password reset', error: error.message });
+  }
+});
+
+// Logout user
+router.post('/logout', async (req, res) => {
+  try {
+    // Since JWT is stateless, we can't invalidate the token on the server
+    // But we'll still provide an endpoint for the client to clear cookies if needed
+    res.status(200).json({ message: 'Logged out successfully' });
+  } catch (error) {
+    console.error('Logout error:', error);
+    res.status(500).json({ message: 'Server error during logout', error: error.message });
   }
 });
 

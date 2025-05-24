@@ -19,6 +19,38 @@ router.get('/', async (req, res) => {
   }
 });
 
+// Get organizer's events - Organizer only
+router.get('/my-events', authMiddleware, authorizeRoles('organizer'), async (req, res) => {
+  try {
+    console.log('User object:', req.user);
+    console.log('User ID for query:', req.user._id);
+    
+    const events = await Event.find({ organizer: req.user._id })
+      .sort({ createdAt: -1 });
+    
+    console.log('Found events:', events.length);
+    res.status(200).json(events);
+  } catch (error) {
+    console.error('Get organizer events error:', error);
+    console.error('Error details:', error.stack);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
+// Get all pending events - Admin only
+router.get('/admin/pending', authMiddleware, authorizeRoles('admin'), async (req, res) => {
+  try {
+    const events = await Event.find({ status: 'pending' })
+      .populate('organizer', 'name email')
+      .sort({ createdAt: -1 });
+    
+    res.status(200).json(events);
+  } catch (error) {
+    console.error('Get pending events error:', error);
+    res.status(500).json({ message: 'Server error', error: error.message });
+  }
+});
+
 // Get event by ID - Public access
 router.get('/:id', async (req, res) => {
   try {
@@ -147,19 +179,6 @@ router.delete('/:id', authMiddleware, authorizeRoles('organizer'), async (req, r
   }
 });
 
-// Get organizer's events - Organizer only
-router.get('/my-events', authMiddleware, authorizeRoles('organizer'), async (req, res) => {
-  try {
-    const events = await Event.find({ organizer: req.user._id })
-      .sort({ createdAt: -1 });
-    
-    res.status(200).json(events);
-  } catch (error) {
-    console.error('Get organizer events error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
 // Get event analytics - Organizer only
 router.get('/:id/analytics', authMiddleware, authorizeRoles('organizer'), async (req, res) => {
   try {
@@ -223,23 +242,8 @@ router.put('/:id/status', authMiddleware, authorizeRoles('admin'), async (req, r
     res.status(200).json({
       message: `Event ${status} successfully`,
       event
-    });
-  } catch (error) {
+    });  } catch (error) {
     console.error('Update event status error:', error);
-    res.status(500).json({ message: 'Server error', error: error.message });
-  }
-});
-
-// Get all pending events - Admin only
-router.get('/admin/pending', authMiddleware, authorizeRoles('admin'), async (req, res) => {
-  try {
-    const events = await Event.find({ status: 'pending' })
-      .populate('organizer', 'name email')
-      .sort({ createdAt: -1 });
-    
-    res.status(200).json(events);
-  } catch (error) {
-    console.error('Get pending events error:', error);
     res.status(500).json({ message: 'Server error', error: error.message });
   }
 });
